@@ -44,6 +44,7 @@ public class EventController {
         return ResponseEntity.created(uri).body(attendeeIdDTO);
     }
 
+    @CrossOrigin(origins = "*", allowedHeaders = "*")
     @GetMapping("/attendees/{id}")
     public ResponseEntity<AttendeesListResponseDTO> getEventAttendees(@PathVariable String id) {
         AttendeesListResponseDTO attendeesListResponse = this.attendeeService.getEventsAttendee(id);

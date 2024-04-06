@@ -7,20 +7,37 @@ import { Table } from './table/table'
 import { TableHeader } from './table/table-header'
 import { TableCell } from './table/table-cell'
 import { TableRow } from './table/table-row'
-import { ChangeEvent, useState } from 'react'
-import { attendees } from '../data/attendees'
+import { ChangeEvent, useEffect, useState } from 'react'
 
 dayjs.extend(relativeTime)
 dayjs.locale('pt-br')
 
+interface Attendee {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+  checkedInAt: string | null
+}
+
 export function AttendeeList() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
 
   const totalPages = Math.ceil(attendees.length / 10)
 
+  useEffect(() => {
+    fetch('http://localhost:8080/events/attendees/ef38a5c9-5b46-4796-8fde-90944418108b')
+      .then(response => response.json())
+      .then(data => {
+        setAttendees(data.attendees)
+      })
+  }, [page])
+
   function onSearchInputChange(event : ChangeEvent<HTMLInputElement>) {
     setSearch(event.target.value)
+    setPage(1)
   }
 
   function goToFirstPage() {
@@ -45,10 +62,11 @@ export function AttendeeList() {
         <h1 className="font-bold text-2xl">Participantes</h1>
         <div className="px-3 w-72 py-1.5 border border-white/10 rounded-lg flex items-center gap-3">
           <Search className='size-4 text-emerald-300' />
-          <input onChange={onSearchInputChange} className="bg-transparent flex-1 outline-none border-0 p-0 text-sm" placeholder="Buscar participante..." />
+          <input 
+            onChange={onSearchInputChange} 
+            className="bg-transparent flex-1 outline-none border-0 p-0 text-sm focus:ring-0" 
+            placeholder="Buscar participante..." />
         </div>
-
-        {search}
       </div>
 
       <Table>
@@ -65,7 +83,14 @@ export function AttendeeList() {
           </tr>
         </thead>
         <tbody>
-          {attendees.slice((page - 1) * 10, page * 10).map(attendee => {
+          {attendees
+            .filter(attendee => 
+              attendee.name.toLowerCase().includes(search.toLowerCase())
+              || attendee.email.toLowerCase().includes(search.toLowerCase())
+              || attendee.id.includes(search)
+            ) 
+            .slice((page - 1) * 10, page * 10)
+            .map(attendee => {
             return (
               <TableRow key={attendee.id}>
                 <TableCell>
@@ -79,7 +104,11 @@ export function AttendeeList() {
                   </div>
                 </TableCell>
                 <TableCell>{dayjs().to(attendee.createdAt)}</TableCell>
-                <TableCell>{dayjs().to(attendee.checkedInAt)}</TableCell>
+                <TableCell>
+                  {attendee.checkedInAt === null 
+                  ? <span className='text-zinc-500'>Não fez check-in</span>
+                  : dayjs().to(attendee.checkedInAt)}
+                </TableCell>
                 <TableCell>
                   <IconButton transparent>
                     <MoreHorizontal className='size-4'/>
@@ -92,7 +121,7 @@ export function AttendeeList() {
         <tfoot>
             <tr>
               <TableCell colSpan={3}>
-                Mostrando 10 de {attendees.length} itens
+                Mostrando {page * 10 < attendees.length ? '10' : attendees.length % 10} de {attendees.length} itens
               </TableCell>
               <TableCell className='text-right' colSpan={3}>
                 <div className='inline-flex items-center gap-8'>
